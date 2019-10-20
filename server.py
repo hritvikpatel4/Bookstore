@@ -4,15 +4,6 @@ import sys
 
 #Books database
 #title->0 author->1 quantity->2 price->3 rating->4
-books = [["hamlet", "shakespeare", 10, 349, 4.8],
-         ["julias caesar", "shakespeare", 15, 299, 4.5],
-         ["animal farm", "george orwell", 25, 99, 4.9],
-         ["and then there were none", "agatha christie", 45, 299, 5.0],
-         ["the unexpected guest", "agatha christie", 10, 249, 4.2],
-         ["lord of the rings", "j. r. r. tolkien", 5, 1199, 5.0],
-         ["1984", "george orwell", 15, 149, 3.9],
-         ["pride and prejudice", "jane austen", 20, 249, 4.3],
-         ["war and peace", "leo tolstoy", 30, 199, 4.5]]
 
 def parser(name):
     #Function for parsing the query
@@ -39,13 +30,13 @@ def parser(name):
 
 def find(title):
     #returns the index of the title from the database
-    for i in range(len(books)) :
+    for i in range(len(books)):
         if title == books[i][0]:
             return i
     return -1
 
 def transfer(i):
-    details = books[i][0].title() + " by " + books[i][1].title() + "\nRating: " + str(books[i][4]) + "\nIn Stock: " + str(books[i][2]) + "\tPrice: " + str(books[i][3])
+    details = books[i][0].title() + " by " + books[i][1].title() + "\nRating: " + books[i][4] + "\nIn Stock: " + books[i][2] + "\tPrice: " + books[i][3]
     details_en = str.encode(details)
     connsocket.send(details_en)
 
@@ -61,25 +52,25 @@ def cart(items, index):
             e1_en = str.encode(e1)
             connsocket.send(e1_en)
         else:
-            books[index][2] = books[index][2] - int(p[-1])
-            cart_total += (int(p[-1])*books[index][3])
+            books[index][2] = str(int(books[index][2]) - int(p[-1]))
+            cart_total += (int(p[-1])*int(books[index][3]))
             purchaseinfo[books[index][0]] = int(p[-1])
-            m1 = "Successfully added to cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + str(books[index][2]) + "\nCart Value: " + str(cart_total)
+            m1 = "Successfully added to cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + books[index][2] + "\nCart Value: " + str(cart_total)
             m1_en = str.encode(m1)
             connsocket.send(m1_en)
     if p[-2] == "modify" and p[-1] == "clear":
-        books[index][2] = books[index][2] + purchaseinfo[books[index][0]]
-        cart_total -= (purchaseinfo[books[index][0]]*books[index][3])
-        m2 = "Successfully modified cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + str(books[index][2]) + "\nCart Value: " + str(cart_total)
+        books[index][2] = str(int(books[index][2]) + purchaseinfo[books[index][0]])
+        cart_total -= (purchaseinfo[books[index][0]]*int(books[index][3]))
+        m2 = "Successfully modified cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + books[index][2] + "\nCart Value: " + str(cart_total)
         m2_en = str.encode(m2)
         connsocket.send(m2_en)
     if p[-3] == "modify" and p[-2] == "update" and int(p[-1]) > 0 and int(p[-1]) <= int(purchaseinfo[books[index][0]]):
-        books[index][2] = books[index][2] + purchaseinfo[books[index][0]] - int(p[-1])
-        cart_total -= (int(p[-1])*books[index][3])
+        books[index][2] = str(int(books[index][2]) + purchaseinfo[books[index][0]] - int(p[-1]))
+        cart_total -= (int(p[-1])*int(books[index][3]))
         purchaseinfo[books[index][0]] -= int(p[-1])
-        m2 = "Successfully modified cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + str(books[index][2]) + "\nCart Value: " + str(cart_total)
-        m2_en = str.encode(m2)
-        connsocket.send(m2_en)
+        m3 = "Successfully modified cart!\n" + "Updated quantity for " + books[index][0].title() + " is " + books[index][2] + "\nCart Value: " + str(cart_total)
+        m3_en = str.encode(m3)
+        connsocket.send(m3_en)
     
 if __name__ == "__main__":
     #Socket programming
@@ -88,6 +79,17 @@ if __name__ == "__main__":
     serverconn.bind(("",port))
     serverconn.listen()
     print("s_log: Server running on", port)
+    db = open("books.data", 'r+')
+    books = db.read()
+    print("The books database contains: ")
+    print(books)
+    books = books.split(";")
+    for line in range(len(books)):
+        temp = books[line].split(",")
+        del books[line]
+        books.insert(line, temp)
+    print("Update")
+    print(books)
     
     connsocket, addr = serverconn.accept()
     while 1:
@@ -95,9 +97,15 @@ if __name__ == "__main__":
         decodedterm = term.decode()
         decodedterm = decodedterm.lower()
         if decodedterm == "exit":
+            if bool(purchaseinfo):
+                #TODO: Update file with contents
+            if not bool(purchaseinfo):
+                #TODO: Clear the dictionary and revert the transactions
             print("s_log: Closed connection")
             connsocket.shutdown(1)
             connsocket.close()
+            db.close()
+            books.clear()
             sys.exit()
         print("s_log: Received data from client")
         sleep(0.25)
